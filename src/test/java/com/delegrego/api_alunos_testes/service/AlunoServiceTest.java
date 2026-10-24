@@ -2,6 +2,8 @@ package com.delegrego.api_alunos_testes.service;
 
 import com.delegrego.api_alunos_testes.dto.AlunoRequest;
 import com.delegrego.api_alunos_testes.dto.AlunoResponse;
+import com.delegrego.api_alunos_testes.exception.AlunoNaoEncontradoException;
+import com.delegrego.api_alunos_testes.exception.EmailCadastradoException;
 import com.delegrego.api_alunos_testes.model.Aluno;
 import com.delegrego.api_alunos_testes.repository.AlunoRepository;
 import org.assertj.core.api.Assertions;
@@ -39,7 +41,7 @@ public class AlunoServiceTest {
 
         Aluno aluno = new Aluno(
                 1L, request.getNome(), request.getEmail(), request.getSenha(),
-               request.getDataNascimento(), request.getMedia()
+                request.getDataNascimento(), request.getMedia()
         );
 
         Mockito.when(repository.save(Mockito.any(Aluno.class))).thenReturn(aluno);
@@ -108,7 +110,7 @@ public class AlunoServiceTest {
                 LocalDate.of(2001, 10, 11), 8);
 
         AlunoRequest requestAlunoAtualizado = new AlunoRequest(
-        "Henrique Novo", "henriquenovo@gmail.com", "senhanova",
+                "Henrique Novo", "henriquenovo@gmail.com", "senhanova",
                 LocalDate.of(2001, 10, 11), 9);
 
         // Stub
@@ -127,7 +129,51 @@ public class AlunoServiceTest {
 
     }
 
+    @Test
+    void deveLancarExcecaoAlunoNaoEncontrado() {
 
+        // Arrange
+        AlunoRequest request = new AlunoRequest(
+                "Henrique", "henrique@gmail.com", "senha",
+                LocalDate.of(2001, 10, 11), 8);
+
+        // Stub
+        Mockito.when(repository.findById(99L)).thenReturn(Optional.empty());
+
+        // Assert
+        Assertions.assertThatThrownBy(() -> service.obterAlunoPorId(99L))
+                .isInstanceOf(AlunoNaoEncontradoException.class);
+
+        Assertions.assertThatThrownBy(() -> service.atualizarAluno(99L, request))
+                .isInstanceOf(AlunoNaoEncontradoException.class);
+
+    }
+
+    @Test
+    void deveLancarExcecaoEmailCadastrado() {
+
+        // Arrange
+        AlunoRequest request = new AlunoRequest(
+                "Henrique", "henrique@gmail.com", "senha",
+                LocalDate.of(2001, 10, 11), 8);
+
+        Aluno aluno = new Aluno(
+                1L, "Henrique", "henrique@gmail.com", "senha",
+                LocalDate.of(2001, 10, 11), 8);
+
+        // Stub
+        Mockito.when(repository.existsByEmailIgnoreCase(Mockito.anyString())).thenReturn(true);
+        Mockito.when(repository.existsByEmailIgnoreCaseAndIdNot(Mockito.anyString(), Mockito.anyLong())).thenReturn(true);
+        Mockito.when(repository.findById(1L)).thenReturn(Optional.of(aluno));
+
+        // Assert
+        Assertions.assertThatThrownBy(() -> service.cadastrarAluno(request))
+                .isInstanceOf(EmailCadastradoException.class);
+
+        Assertions.assertThatThrownBy(() -> service.atualizarAluno(1L, request))
+                .isInstanceOf(EmailCadastradoException.class);
+
+    }
 
 
 }
